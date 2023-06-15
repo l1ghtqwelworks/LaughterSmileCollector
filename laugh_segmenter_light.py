@@ -17,6 +17,8 @@ from models import ResNetBigger
 from utils import torch_utils, data_loaders, audio_utils
 
 config = configs.CONFIG_MAP['resnet_with_augmentation']
+default_threshold = 0.8
+default_min_length = 0.6
 
 
 def load_model_and_device(model_path: str = 'checkpoints/in_use/resnet_with_augmentation') -> (
@@ -71,7 +73,7 @@ def frame_span_to_time_span(frame_span, fps=100.):
     return frame_span[0] / fps, frame_span[1] / fps
 
 
-def get_laughter_instances(probs, threshold=0.5, min_length=0.2, fps=100.) -> typing.List[typing.Tuple[float, float]]:
+def get_laughter_instances(probs, threshold=default_threshold, min_length=default_min_length, fps=100.) -> typing.List[typing.Tuple[float, float]]:
     instances = []
     current_list = []
     for i in range(len(probs)):
@@ -89,10 +91,10 @@ def get_laughter_instances(probs, threshold=0.5, min_length=0.2, fps=100.) -> ty
 
 
 def segment_laughter(model: ResNetBigger, device: torch.device, inference_generator: DataLoader, file_length: float,
-                     threshold=0.5, min_length=0.2) -> typing.List[typing.Tuple[float, float]]:
+                     threshold=default_threshold, min_length=default_min_length) -> typing.List[typing.Tuple[float, float]]:
 
     print("Segmenting laughter...")
-    
+
     probs = []
     for model_inputs, _ in tqdm(inference_generator):
         x = torch.from_numpy(model_inputs).float().to(device)
@@ -159,12 +161,12 @@ def save_laughter_segments(instances, original_file_path: str, output_dir: str,
 
 
 def segment_laughter_file(model: ResNetBigger, device: torch.device, audio_path: str,
-                          threshold=0.5, min_length=0.2) -> typing.List[typing.Tuple[float, float]]:
+                          threshold=default_threshold, min_length=default_min_length) -> typing.List[typing.Tuple[float, float]]:
     inference_generator = load_audio_dataloader(audio_path)
     file_length = audio_utils.get_audio_length(audio_path)
     return segment_laughter(model, device, inference_generator, file_length, threshold, min_length)
 
 
-def load_and_segment_laughter(audio_path: str, threshold=0.5, min_length=0.2) -> typing.List[typing.Tuple[float, float]]:
+def load_and_segment_laughter(audio_path: str, threshold=default_threshold, min_length=default_min_length) -> typing.List[typing.Tuple[float, float]]:
     model, device = load_model_and_device()
     return segment_laughter_file(model, device, audio_path, threshold, min_length)
